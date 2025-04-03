@@ -36,8 +36,33 @@ public class SqlParserTest {
                 "\tCreateTime   uint32  `gorm:\"column:create_time;type:INT(11) UNSIGNED;NOT NULL\"`\n" +
                 "\tUpdateTime   uint32  `gorm:\"column:update_time;type:INT(11) UNSIGNED;NOT NULL\"`\n" +
                 "}\n";
-        String actual = sqlParser.Execute(sql);
-        assertEquals(expect, actual);
+        sqlParser.Execute(sql);
+        assertEquals(expect, sqlParser.getModelFileContent());
+    }
+
+    @Test
+    public void TestExecute2() {
+        String sql = "CREATE DATABASE IF NOT EXISTS demo_db;\n" +
+                "\n" +
+                "CREATE TABLE IF NOT EXISTS `demo_db`.`test_tab` (\n" +
+                "  `id` bigint(21) unsigned NOT NULL AUTO_INCREMENT,\n" +
+                "  user_id int(11) unsigned DEFAULT 0 NOT NULL COMMENT '用户ID',\n" +
+                "  parent_user_id varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT '' NOT NULL,\n" +
+                "  no_id bigint(21) DEFAULT 0 NOT NULL comment '迷彩ID，1-u 0-n',\n" +
+                "  `tiny_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT '' NOT NULL comment 123,\n" +
+                "\n" +
+                "  `score` decimal(10,3)  DEFAULT '0.00' NOT NULL,\n" +
+                "  create_time int(11) unsigned DEFAULT 0 NOT NULL,\n" +
+                "  update_time int(11) unsigned DEFAULT 0 NOT NULL,\n" +
+                "  UNIQUE (user_id, pareent_user_id),\n" +
+                "  PRIMARY KEY (id)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci comment '操作记录个';";
+        SqlParser sqlParser = new SqlParser();
+
+        sqlParser.Execute(sql);
+
+        System.out.printf("Model: %s\n", sqlParser.getModelFileContent());
+        System.out.printf("Repo: %s\n", sqlParser.getRepoFileContent());
     }
 
     @Test
@@ -58,7 +83,8 @@ public class SqlParserTest {
                 "KEY g_type (g_type) USING BTREE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
         SqlParser sqlParser = new SqlParser();
-        String actual = sqlParser.Execute(sql);
+        sqlParser.Execute(sql);
+        String actual = sqlParser.getModelFileContent();
         String expect = "package model\n" +
                 "\n" +
                 "import (\n" +
@@ -94,7 +120,8 @@ public class SqlParserTest {
                 "    `api_permission_bitmask` int unsigned not null\n" +
                 ");";
         SqlParser sqlParser = new SqlParser();
-        String actual = sqlParser.Execute(sql);
+        sqlParser.Execute(sql);
+        String actual = sqlParser.getModelFileContent();
         String expect = "package model\n" +
                 "\n" +
                 "import (\n" +

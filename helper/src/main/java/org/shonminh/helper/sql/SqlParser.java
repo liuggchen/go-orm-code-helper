@@ -18,10 +18,14 @@ public class SqlParser {
 
 
     private List<MySqlCreateTableStatement> statements;
-    private String fileName;
+    private String modelFileName;
+    private String repoFileName;
     private String errMsg;
 
     final String beforeComment = "format.before_comment";
+
+    private String modelFileContent;
+    private String repoFileContent;
 
     private void generateStatements(String str) {
 
@@ -56,10 +60,12 @@ public class SqlParser {
                 Model model = new Model(modelName);
                 // set all column properties
                 model.setAllColumnProperties(createTable);
-                this.setFileName(model.getModelName().replaceFirst("_tab$", "") + ".go");
+                this.setModelFileName(model.getModelName().replaceFirst("_tab$", "") + ".go");
                 List<String> packageList = model.getHeader().getDependencyPackageList();
                 h.appendDependencyPackageList(packageList);
                 resultStringBuilder.append(model.generateGoStruct());
+                // 添加condition
+                resultStringBuilder.append(model.generateConditionGoStruct());
             } catch (Exception e) {
                 this.setErrMsg(e.getCause().getMessage());
             }
@@ -67,6 +73,27 @@ public class SqlParser {
         List<String> totalPackageList = h.getDependencyPackageList();
         String headerCodes = HeaderUtil.getHeaderCodes(totalPackageList);
         return headerCodes + resultStringBuilder.toString();
+    }
+
+    private String parseRepoStatements() {
+        StringBuilder resultStringBuilder = new StringBuilder();
+        Header h = new Header();
+        for (MySqlCreateTableStatement createTable : statements) {
+            try {
+                String modelName = getModelName(createTable);
+                Model model = new Model(modelName);
+                // set all column properties
+                model.setAllColumnProperties(createTable);
+                this.setRepoFileName(model.getModelName().replaceFirst("_tab$", "") + "_repo.go");
+                List<String> packageList = model.getHeader().getDependencyPackageList();
+                h.appendDependencyPackageList(packageList);
+                resultStringBuilder.append(model.generateRepoGoStruct());
+            } catch (Exception e) {
+                this.setErrMsg(e.getCause().getMessage());
+            }
+        }
+
+        return resultStringBuilder.toString();
     }
 
 
@@ -85,17 +112,18 @@ public class SqlParser {
         this.statements = statements;
     }
 
-    public String Execute(String sql) {
+    public void Execute(String sql) {
         this.generateStatements(sql);
-        return parseStatements();
+        this.setModelFileContent(this.parseStatements());
+        this.setRepoFileContent(this.parseRepoStatements());
     }
 
-    public String getFileName() {
-        return fileName;
+    public String getModelFileName() {
+        return modelFileName;
     }
 
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
+    public void setModelFileName(String modelFileName) {
+        this.modelFileName = modelFileName;
     }
 
     public String getErrMsg() {
@@ -104,6 +132,30 @@ public class SqlParser {
 
     public void setErrMsg(String errMsg) {
         this.errMsg = errMsg;
+    }
+
+    public String getRepoFileContent() {
+        return repoFileContent;
+    }
+
+    public void setRepoFileContent(String repoFileContent) {
+        this.repoFileContent = repoFileContent;
+    }
+
+    public String getModelFileContent() {
+        return modelFileContent;
+    }
+
+    public void setModelFileContent(String modelFileContent) {
+        this.modelFileContent = modelFileContent;
+    }
+
+    public String getRepoFileName() {
+        return repoFileName;
+    }
+
+    public void setRepoFileName(String repoFileName) {
+        this.repoFileName = repoFileName;
     }
 }
 

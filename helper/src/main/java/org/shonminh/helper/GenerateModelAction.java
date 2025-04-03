@@ -32,8 +32,8 @@ public class GenerateModelAction extends AnAction {
         }
         Path filePath = Paths.get(Objects.requireNonNull(Objects.requireNonNull(FileDocumentManager.getInstance().getFile(editor.getDocument())).getCanonicalPath()));
         SqlParser sqlParser = new SqlParser();
-        String result = sqlParser.Execute(sqlStr);
-        String canonicalPath = filePath.getParent().toString() + "/" + sqlParser.getFileName();
+        sqlParser.Execute(sqlStr);
+        String result = sqlParser.getModelFileContent();
         if (sqlParser.getErrMsg() != null) {
             Messages.showErrorDialog("create table not found, please check sql syntax", "Generate Model Result");
             return;
@@ -43,9 +43,15 @@ public class GenerateModelAction extends AnAction {
             return;
         }
         try {
+            String canonicalPath = filePath.getParent().toString() + "/" + sqlParser.getModelFileName();
             FileUtil.WriteFile(canonicalPath, result);
             Messages.showInfoMessage("success, file is " + canonicalPath, "Generate Model Result");
             freshProjectFiles(canonicalPath);
+
+            String repoPath = filePath.getParent().toString() + "/" + sqlParser.getRepoFileName();
+            FileUtil.WriteFile(repoPath, sqlParser.getRepoFileContent());
+            Messages.showInfoMessage("success, file is " + repoPath, "Generate Model Result");
+            freshProjectFiles(repoPath);
         } catch (IOException e) {
             Messages.showInfoMessage("failed, exception info is " + e.toString(), "Generate Model Result");
         }

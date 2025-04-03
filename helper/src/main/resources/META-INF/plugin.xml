@@ -1,8 +1,8 @@
 <idea-plugin>
     <id>org.shonminh.helper.GenerateModelAction</id>
     <name>Go Orm Code Helper</name>
-    <version>1.4.3</version>
-    <vendor email="shonminh@gmail.com" url="https://github.com/Shonminh">Shonminh Yang</vendor>
+    <version>2.1.0</version>
+    <vendor email="shonminh@gmail.com" url="https://github.com/Shonminh">流浪者</vendor>
 
     <description><![CDATA[
         <h1>Go Orm Code Helper</h1>
@@ -26,6 +26,11 @@
     </description>
     <change-notes>
         <![CDATA[
+        <b>2.1.0</b>
+        <ul>
+          <li>添加注释</li>
+        </ul>
+
         <b>1.4.3</b>
         <ul>
           <li>fix parse primary key bug and add column tag</li>

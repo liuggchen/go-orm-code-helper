@@ -1,6 +1,7 @@
 package org.shonminh.helper.sql;
 
 import com.alibaba.druid.sql.ast.SQLDataTypeImpl;
+import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.dialect.mysql.ast.MySqlPrimaryKey;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlCreateTableStatement;
@@ -18,6 +19,8 @@ public class Model {
     private List<Column> columns;
     private Header header;
     private String structModelName;
+    private String tableComment;
+    private String tableName;
 
     public String getPrimaryKey() {
         return primaryKey;
@@ -73,6 +76,9 @@ public class Model {
         calculateFormalizeString();
 
         StringBuilder sb = new StringBuilder();
+        if (this.getTableComment() != null && !this.getTableComment().isEmpty()) {
+            sb.append("// ").append(this.getTableComment()).append("\n");
+        }
         sb.append("type ");
         sb.append(this.getStructModelName());
         sb.append(" struct {\n");
@@ -82,6 +88,63 @@ public class Model {
             sb.append("\n");
         }
         sb.append("}\n");
+        return sb.toString();
+    }
+
+    public String generateConditionGoStruct() {
+        if (this.getColumns() == null || this.getColumns().size() == 0) {
+            return "";
+        }
+        this.setStructModelName(StringUtil.camelString(this.getModelName()));
+
+        // calculate formalize blank string
+        calculateFormalizeString();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n");
+        if (this.getTableComment() != null && !this.getTableComment().isEmpty()) {
+            sb.append("// ").append(this.getTableComment() + "查询条件").append("\n");
+        }
+        sb.append("type ");
+        sb.append(this.getStructModelName() + "Condition");
+        sb.append(" struct {\n");
+
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    public String generateRepoGoStruct() {
+        if (this.getColumns() == null || this.getColumns().size() == 0) {
+            return "";
+        }
+        this.setStructModelName(StringUtil.camelString(this.getModelName()));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("package repo\n" +
+                "\n" +
+                "import (\n" +
+                "\t\"context\"\n" +
+                "\n" +
+                "\t\"go_api/dao/consts\"\n" +
+                "\t\"go_api/dao/model\"\n" +
+                "\n" +
+                "\t\"gorm.io/gorm\"\n" +
+                ")\n\n");
+        sb.append("type ");
+        sb.append(this.getStructModelName());
+        sb.append(" struct {\n");
+        sb.append("	repo\n");
+        sb.append("}\n\n");
+        sb.append("func New" + this.getStructModelName() + "(pool *consts.Pool) *" + this.getStructModelName() + " {\n");
+        sb.append("	return &" + this.getStructModelName() + "{repo: repo{pool, \"" + this.getTableName() + "\"}}\n");
+        sb.append("}\n");
+        sb.append("\n");
+
+        sb.append("func (r *" + this.getStructModelName() + ") Create(ctx context.Context, data *model." + this.getStructModelName() + ")" + "(error) {\n");
+        sb.append("	return r.ctx(ctx).Create(data).Error\n");
+        sb.append("}\n");
+
+
         return sb.toString();
     }
 
@@ -134,6 +197,17 @@ public class Model {
         if (tableElementList == null || tableElementList.size() == 0) {
             return;
         }
+
+        SQLExpr comment = createTable.getComment();
+        if (comment != null) {
+            this.setTableComment(comment.toString());
+        }
+
+        String tableName = createTable.getTableName();
+        if (tableName != null) {
+            this.setTableName(tableName);
+        }
+
         for (SQLTableElement element : tableElementList) {
             // set primary key
             if (element instanceof MySqlPrimaryKey) {
@@ -183,6 +257,10 @@ public class Model {
                 column.setAutoIncrement(true);
             }
 
+            if (columnDefinition.getComment() != null) {
+                column.setComment(columnDefinition.getComment().toString());
+            }
+
             // set model header
             String dependencyPackageName = HeaderUtil.getDependencyPackageName(column.getType());
             if (dependencyPackageName != null) {
@@ -198,8 +276,7 @@ public class Model {
 
     private boolean isNotNull(SQLColumnDefinition definition) {
         if (definition.getConstraints() != null && definition.getConstraints().size() > 0) {
-            for (SQLColumnConstraint constraint :
-                    definition.getConstraints()) {
+            for (SQLColumnConstraint constraint : definition.getConstraints()) {
                 if (constraint instanceof SQLNotNullConstraint) {
                     return true;
                 }
@@ -224,10 +301,7 @@ public class Model {
 
     protected String generateGoUpdateFunction() {
 
-        return String.format("func Update%s(db *gorm.DB, dao %s, tableName string, query interface{}, queryArgs []interface{}, updateArgs map[string]interface{}) (affectRows int64, err error) {\n" +
-                "\td := db.Table(tableName).Where(query, queryArgs...).Updates(updateArgs)\n" +
-                "\treturn d.RowsAffected, d.Error\n" +
-                "}\n", this.getStructModelName(), this.getStructModelName());
+        return String.format("func Update%s(db *gorm.DB, dao %s, tableName string, query interface{}, queryArgs []interface{}, updateArgs map[string]interface{}) (affectRows int64, err error) {\n" + "\td := db.Table(tableName).Where(query, queryArgs...).Updates(updateArgs)\n" + "\treturn d.RowsAffected, d.Error\n" + "}\n", this.getStructModelName(), this.getStructModelName());
     }
 
 
@@ -241,12 +315,23 @@ public class Model {
 
     @Override
     public String toString() {
-        return "Model{" +
-                "modelName='" + modelName + '\'' +
-                ", primaryKey='" + primaryKey + '\'' +
-                ", columns=" + columns +
-                ", header=" + header +
-                ", structModelName='" + structModelName + '\'' +
-                '}';
+        return "Model{" + "modelName='" + modelName + '\'' + ", primaryKey='" + primaryKey + '\'' + ", columns=" + columns + ", header=" + header + ", structModelName='" + structModelName + '\'' + '}';
+    }
+
+    public String getTableComment() {
+        return tableComment;
+    }
+
+    public void setTableComment(String tableComment) {
+        // 去掉头尾的单引号和双引号
+        this.tableComment = tableComment.strip().replaceFirst("^['\"]", "").replaceAll("['\"]$", "");
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName.strip().replaceFirst("^`", "").replaceAll("`$", "");;
     }
 }

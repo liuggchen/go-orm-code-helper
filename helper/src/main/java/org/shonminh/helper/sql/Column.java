@@ -8,6 +8,7 @@ public class Column {
     private String name;
     private String type;
     private String column;
+    private String comment;
     private String defaultValue;
     private boolean isUnsigned;
     private boolean isNotNull;
@@ -48,7 +49,9 @@ public class Column {
         return type;
     }
 
-    public String getColumn() { return column; }
+    public String getColumn() {
+        return column;
+    }
 
     public void setType(String type) {
         this.type = type;
@@ -126,6 +129,9 @@ public class Column {
             sb.append("NOT NULL");
         }
         sb.append("\"`");
+        if (this.comment != null && !this.comment.isEmpty()) {
+            sb.append(" // ").append(comment);
+        }
         return sb.toString();
     }
 
@@ -139,17 +145,15 @@ public class Column {
 
     @Override
     public String toString() {
-        return "Column{" +
-                "name='" + name + '\'' +
-                ", type='" + type + '\'' +
-                ", defaultValue='" + defaultValue + '\'' +
-                ", isUnsigned=" + isUnsigned +
-                ", isNotNull=" + isNotNull +
-                ", formatStr='" + formatStr + '\'' +
-                ", typeFormatStr='" + typeFormatStr + '\'' +
-                ", isAutoIncrement=" + isAutoIncrement +
-                ", structName='" + structName + '\'' +
-                ", structType='" + structType + '\'' +
-                '}';
+        return "Column{" + "name='" + name + '\'' + ", type='" + type + '\'' + ", defaultValue='" + defaultValue + '\'' + ", isUnsigned=" + isUnsigned + ", isNotNull=" + isNotNull + ", formatStr='" + formatStr + '\'' + ", typeFormatStr='" + typeFormatStr + '\'' + ", isAutoIncrement=" + isAutoIncrement + ", structName='" + structName + '\'' + ", structType='" + structType + '\'' + '}';
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment.strip().replaceFirst("^['\"]", "").replaceAll("['\"]$", "");
+        ;
     }
 }
